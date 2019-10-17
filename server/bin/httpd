@@ -1,0 +1,51 @@
+#!/usr/bin/env node
+
+/* jshint esversion: 8 */
+
+const _debug = require('debug')('httpd');
+const _config = require('../etc/config');
+const _app = require('../lib/server');
+
+var listen = (port) => {
+  _app.set('port', port);
+  _app.listen(_app.get('port'), () => {
+    console.log('Node app is running at localhost:' + port);
+  });
+};
+
+var main = (args) => {
+
+  var config = _config;
+
+  for (var i in args) {
+    if (args[i] === '--config') {
+      i++;
+      _debug('load config:' + args[i]);
+      config = require(args[i]);
+    }
+  }
+
+  _debug(config);
+
+  if (config.DB.uri) {
+
+    var db = require(config.DB.module);
+
+    _debug('connect database:', config.DB.uri);
+
+    db.connect(config.DB.uri, (error) => {
+      if (error) {
+        console.error('Unable to connect to DataBase [' + error + ']');
+        process.exit(1);
+      } else {
+        listen(config.PORT || config.DEFAULT_PORT);
+      }
+    });
+  } else {
+    listen(config.PORT || config.DEFAULT_PORT);
+  }
+};
+
+main(process.argv.filter((arg, idx) => {
+  return (idx > 1);
+}));
